@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="referrer" content="no-referrer">
 <meta name="color-scheme" content="light">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-kjbuYhIZGlBbdmsTxVRIj4XiWW+4kZ+N94gNLTjfqLE='; style-src 'sha256-bIC1cvxH393csOSw86MdPqafcFllIrVM31HV5y5+NOk='; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-X+i0aVh2umOSNMNcDM2Nwt98zvNj34cXGnCymcaFv+8='; style-src 'sha256-bIC1cvxH393csOSw86MdPqafcFllIrVM31HV5y5+NOk='; base-uri 'none'; form-action 'none'">
 <title>Báo cáo SystemCheck</title>
 <style>
   :root {
@@ -227,6 +227,7 @@ const groups = ["db", "unv", "wn"];
 const requiredReportKeys = ["v", "cp", "ts", "pf", "vd", "hw", "ent", ...groups, "disc", "tr"];
 const allowedReportKeys = new Set([...requiredReportKeys, "g", "k"]);
 const metricKeys = ["bw", "bc", "sh", "ph", "tw", "cm", "cb", "gt", "ru", "wc", "wf", "dx", "dy", "dh", "ag"];
+const statusActionCodes = new Set(["NOT_RUN", "TIMED_OUT", "SKIPPED_NO_ADMIN", "PERIPH_NOT_RUN"]);
 const actions = Object.freeze({
   DISK_IO: "Chạy SystemCheck từ USB hoặc đảm bảo đủ chỗ trống trên ổ hệ thống để đo ghi/đọc.",
   DATA_UNAVAILABLE: "Kiểm tra kết nối, quyền truy cập hoặc trình điều khiển liên quan rồi quét lại.",
@@ -591,8 +592,12 @@ function renderConfigSummary(view, report) {
   if (!summaryParts.length && !detailRows.length && !lookup) return;
 
   const section = add(view, "section", undefined, "config-panel");
-  const line = summaryParts.length ? summaryParts.join(" / ") : "Serial: " + hw.sn;
-  add(section, "p", line, "config-line");
+  const line = summaryParts.length
+    ? summaryParts.join(" / ")
+    : hw.sn
+      ? "Serial: " + hw.sn
+      : hw.model || "";
+  if (line) add(section, "p", line, "config-line");
 
   if (detailRows.length || lookup) {
     const expander = add(section, "details", undefined, "config-details");
@@ -648,8 +653,10 @@ function renderFindings(view, report) {
       const meta = add(li, "p", undefined, "finding-meta");
       add(meta, "span", severityChipText[group], "chip chip-sm " + severityChipClass[group]);
       add(meta, "span", row.c + (item === undefined ? "" : " · " + item), "code-text");
-      const action = (item !== undefined && Object.hasOwn(actions, item) && actions[item])
-        || (Object.hasOwn(actions, row.c) && actions[row.c]);
+      const action = statusActionCodes.has(row.c)
+        ? actions[row.c]
+        : (item !== undefined && Object.hasOwn(actions, item) && actions[item])
+          || (Object.hasOwn(actions, row.c) && actions[row.c]);
       if (action) {
         const line = add(li, "p", undefined, "finding-action");
         add(line, "strong", "Việc cần làm: ");
