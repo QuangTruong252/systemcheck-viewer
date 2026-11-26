@@ -5,58 +5,129 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="referrer" content="no-referrer">
 <meta name="color-scheme" content="light">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-Wcg/kKwWcCbIG1/qKhR8BvuY/1ZkNdIGO4tdoevzKsQ='; style-src 'sha256-iZbAVmctFMmbSZ5doox0Gd/xntyv9r0eqh/fiTZtAT8='; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-kjbuYhIZGlBbdmsTxVRIj4XiWW+4kZ+N94gNLTjfqLE='; style-src 'sha256-bIC1cvxH393csOSw86MdPqafcFllIrVM31HV5y5+NOk='; base-uri 'none'; form-action 'none'">
 <title>Báo cáo SystemCheck</title>
 <style>
   :root {
-    font: 100%/1.55 system-ui, sans-serif;
+    font: 100%/1.5 system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     color: #172538;
-    background: #f1f5f8;
+    background: #edf2f7;
   }
+  *, *::before, *::after { box-sizing: border-box; }
   body { margin: 0; }
-  main { box-sizing: border-box; max-width: 42rem; margin: auto; padding: 1rem; }
-  h1, h2 { margin: 0; line-height: 1.25; }
-  h1 { font-size: clamp(1.45rem, 5vw, 2rem); }
-  h2 { font-size: 1.12rem; }
-  p, dl, ul { margin: .6rem 0 0; }
+  main { max-width: 34rem; margin: 0 auto; padding: .85rem .85rem 2rem; }
+  h1, h2, p, dl, ul { margin: 0; }
+  .brand { font-size: .78rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: #52637a; }
+  h1 { font-size: 1.45rem; font-weight: 750; line-height: 1.25; margin-top: .15rem; }
+  h2 { font-size: 1.02rem; font-weight: 700; line-height: 1.3; }
+  .detail { color: #52637a; font-size: .86rem; }
+  .status-line { margin-top: .35rem; font-size: .82rem; color: #52637a; }
+  .report-head { margin-bottom: .7rem; }
+  .report-head h2 { font-size: 1.35rem; font-weight: 750; margin-top: .1rem; }
   section, .panel {
-    margin: .85rem 0;
-    border: 1px solid #c8d3de;
+    margin: .75rem 0;
+    border: 1px solid #d5dfe9;
     border-radius: .85rem;
     padding: .85rem 1rem;
     background: #fff;
+    box-shadow: 0 1px 2px rgba(23, 37, 56, .04);
     overflow-wrap: anywhere;
   }
-  .verdict { font-size: 1.24rem; font-weight: 750; }
+  .banner { padding: .9rem 1rem; }
+  .banner.PASS { background: #e8f6ee; border-color: #b7dfc6; }
+  .banner.WARN { background: #fef4e6; border-color: #f3cfa4; }
+  .banner.INC { background: #f2eef9; border-color: #cfc4e4; }
+  .banner.DB { background: #fdecef; border-color: #f2bcc2; }
+  .banner-top { display: flex; align-items: center; justify-content: space-between; gap: .5rem; flex-wrap: wrap; }
+  .verdict { font-size: 1.18rem; font-weight: 800; letter-spacing: .01em; }
+  .banner-sub { margin-top: .3rem; font-size: .88rem; color: #314256; }
+  .banner-note { margin-top: .35rem; font-size: .84rem; color: #435367; }
   .PASS { color: #166037; }
   .WARN { color: #8a3908; }
   .INC { color: #574172; }
   .DB { color: #a12636; }
-  .detail { color: #435367; }
-  dl div { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 3fr); gap: .6rem; padding: .3rem 0; }
-  dt { font-weight: 600; }
-  dd { margin: 0; }
-  ul { padding-inline-start: 1.35rem; }
-  li + li { margin-top: .35rem; }
-  @media (max-width: 24rem) {
-    dl div { grid-template-columns: 1fr; gap: 0; }
+  .NA { color: #4a586b; }
+  .chip {
+    display: inline-block;
+    padding: .14rem .58rem;
+    border-radius: 999px;
+    font-size: .78rem;
+    font-weight: 700;
+    line-height: 1.35;
+    white-space: nowrap;
   }
+  .chip-sm { padding: .08rem .45rem; font-size: .72rem; }
+  .chip.PASS { background: #dff2e6; color: #166037; }
+  .chip.WARN { background: #fbe9d0; color: #8a3908; }
+  .chip.INC { background: #ebe4f6; color: #574172; }
+  .chip.DB { background: #fadce0; color: #a12636; }
+  .chip.NA { background: #eef2f6; color: #4a586b; }
+  .config-line { font-size: .95rem; font-weight: 650; color: #172538; line-height: 1.4; }
+  .config-details { margin-top: .55rem; border-top: 1px solid #edf2f7; padding-top: .5rem; }
+  details summary {
+    cursor: pointer;
+    font-size: .88rem;
+    font-weight: 600;
+    color: #2f4b6e;
+    list-style-position: outside;
+  }
+  section[aria-labelledby="limits"] summary { color: #172538; }
+  section[aria-labelledby="limits"] summary h2 { display: inline; font-size: .98rem; }
+  section[aria-labelledby="limits"] details p { margin-top: .55rem; }
+  .lookup-row { margin-top: .65rem; }
+  .lookup-row a { color: #1759a8; font-weight: 600; text-decoration: none; }
+  .lookup-row a:hover { text-decoration: underline; }
+  .lookup-row a::after { content: " ↗"; }
+  dl { margin-top: .45rem; }
+  dl div {
+    display: grid;
+    grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr);
+    align-items: center;
+    gap: .5rem;
+    padding: .42rem 0;
+    border-top: 1px solid #edf2f7;
+  }
+  dl div:first-child { border-top: 0; padding-top: .2rem; }
+  dt { color: #3a4a5e; font-size: .9rem; }
+  dd { margin: 0; text-align: right; font-weight: 650; font-size: .9rem; font-variant-numeric: tabular-nums; }
+  .findings-list { list-style: none; padding: 0; margin: .45rem 0 0; }
+  .findings-list li { padding: .6rem 0; border-top: 1px solid #edf2f7; }
+  .findings-list li:first-child { border-top: 0; padding-top: .2rem; }
+  .finding-desc { font-size: .94rem; font-weight: 600; color: #172538; line-height: 1.4; }
+  .finding-meta {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: .35rem;
+    margin-top: .28rem;
+    font-size: .78rem;
+    color: #5b6b7f;
+  }
+  .code-text { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: .76rem; }
+  .finding-action { margin-top: .32rem; font-size: .87rem; color: #223349; line-height: 1.4; }
+  .disc-list { margin: .5rem 0 0; padding-inline-start: 1.2rem; font-size: .9rem; color: #2b3c50; }
+  .disc-list li + li { margin-top: .3rem; }
+  section[aria-labelledby="limits"] ul { margin: .45rem 0 0; padding-inline-start: 1.2rem; font-size: .88rem; color: #3a4a5e; }
+  section[aria-labelledby="limits"] li + li { margin-top: .25rem; }
+  .omitted-note { margin-top: .55rem; }
 </style>
 </head>
 <body>
 <main>
-  <h1>Báo cáo SystemCheck</h1>
-  <p id="status" role="status" aria-atomic="true">Đang đọc báo cáo…</p>
+  <p class="brand">SystemCheck</p>
+  <p id="status" class="status-line" role="status" aria-atomic="true">Đang đọc báo cáo…</p>
   <div id="report"></div>
   <section aria-labelledby="limits">
-    <h2 id="limits">Giới hạn phát hiện</h2>
-    <p>Phần mềm không thể xác minh các tình trạng sau:</p>
-    <ul>
-      <li>Card đồ họa từng được dùng để đào coin.</li>
-      <li>Mainboard từng được sửa chữa.</li>
-      <li>Máy từng bị vào nước.</li>
-      <li>Bộ đếm SMART hoặc pin từng bị đặt lại ở tầng firmware.</li>
-    </ul>
+    <details>
+      <summary><h2 id="limits">Giới hạn phát hiện</h2></summary>
+      <p class="detail">Phần mềm không thể xác minh các tình trạng sau:</p>
+      <ul>
+        <li>Card đồ họa từng được dùng để đào coin.</li>
+        <li>Mainboard từng được sửa chữa.</li>
+        <li>Máy từng bị vào nước.</li>
+        <li>Bộ đếm SMART hoặc pin từng bị đặt lại ở tầng firmware.</li>
+      </ul>
+    </details>
   </section>
   <noscript><p>Bật JavaScript để mở báo cáo trên thiết bị này.</p></noscript>
 </main>
@@ -131,21 +202,47 @@ const disclosures = Object.freeze({
   NET_MS_UNREACHABLE: "Mạng hiện tại chưa kết nối được với máy chủ quản trị Microsoft.",
   SKIP_4B: "Đã bỏ qua bài thử xả pin riêng.",
   NO_CLAIM: "Chưa nhập thông số người bán cam kết.",
-  RAM_TEST_SKIPPED: "Đã bỏ qua bài quét RAM vì không chuẩn bị được bộ nhớ kiểm thử."
+  RAM_TEST_SKIPPED: "Đã bỏ qua bài quét RAM vì không chuẩn bị được bộ nhớ kiểm thử.",
+  MIC_LOOPBACK_OK: "Micro mặc định thu được tín hiệu thử 1000 Hz từ loa."
 });
 
 const verdicts = ["PASS", "WARN", "INC", "DB"];
 const verdictText = { PASS: "ĐẠT", WARN: "ĐÀM PHÁN GIÁ / LƯU Ý", INC: "CHƯA ĐỦ KẾT LUẬN", DB: "LOẠI NGAY" };
-const gateText = ["Đạt", "Lưu ý", "Chưa đủ kết luận", "Loại ngay", "Chưa chạy", "Không áp dụng"];
-const gateNames = ["Tải CPU", "RAM khả dụng", "Đồ họa", "Lưu trữ", "Quản trị và WHEA", "Ngoại vi", "Pin"];
+const verdictSummary = {
+  PASS: "Tất cả hạng mục kiểm tra đều đạt ngưỡng đánh giá.",
+  WARN: "Có mục cần lưu ý kiểm tra thêm hoặc đàm phán giá.",
+  INC: "Một số hạng mục chưa đủ dữ liệu kết luận.",
+  DB: "Phát hiện vấn đề nghiêm trọng cần loại trừ."
+};
+const gateText = ["Đạt", "Lưu ý", "Chưa đủ", "Loại", "Chưa chạy", "Không áp dụng"];
+const gateClasses = ["PASS", "WARN", "INC", "DB", "NA", "NA"];
+const gateNames = ["CPU dưới tải", "RAM", "GPU", "Ổ lưu trữ", "Lỗi phần cứng & quản trị", "Ngoại vi", "Pin"];
 const endpointText = { OK: "Kết nối được", INC: "Chưa xác minh kết nối", SKIP_OFFLINE: "Bỏ qua khi ngoại tuyến" };
 const localText = { OK: "Chưa ghi nhận dấu hiệu cục bộ", WARN: "Có mục cần lưu ý hoặc chưa xác minh", DB: "Có phát hiện nghiêm trọng" };
 const summaryText = { model: "Dòng máy", sn: "Serial", cpu: "CPU", gpu: "GPU", ram: "RAM đã lắp", disk: "Ổ hệ thống" };
 const groupText = { db: "Phát hiện nghiêm trọng", unv: "Chưa xác minh", wn: "Lưu ý" };
+const severityChipText = { db: "Loại", unv: "Chưa đủ", wn: "Lưu ý" };
+const severityChipClass = { db: "DB", unv: "INC", wn: "WARN" };
 const groups = ["db", "unv", "wn"];
+const requiredReportKeys = ["v", "cp", "ts", "pf", "vd", "hw", "ent", ...groups, "disc", "tr"];
+const allowedReportKeys = new Set([...requiredReportKeys, "g", "k"]);
+const metricKeys = ["bw", "bc", "sh", "ph", "tw", "cm", "cb", "gt", "ru", "wc", "wf", "dx", "dy", "dh", "ag"];
+const actions = Object.freeze({
+  DISK_IO: "Chạy SystemCheck từ USB hoặc đảm bảo đủ chỗ trống trên ổ hệ thống để đo ghi/đọc.",
+  DATA_UNAVAILABLE: "Kiểm tra kết nối, quyền truy cập hoặc trình điều khiển liên quan rồi quét lại.",
+  DISK_IO_SKIPPED_SPACE: "Giải phóng thêm dung lượng trống (tối thiểu 5 GiB và 10% phân vùng) rồi quét lại.",
+  PERIPH_NOT_RUN: "Quay lại bước Ngoại vi và hoàn tất các bài thử.",
+  SKIPPED_NO_ADMIN: "Chạy lại SystemCheck với quyền Quản trị (Run as administrator) để đọc mục này.",
+  DISK_SMART_UNREADABLE: "Chạy với quyền Quản trị; nếu ổ qua Intel VMD hoặc USB, kiểm tra thêm bằng tiện ích của hãng ổ cứng.",
+  GPU_DRIVER_MISSING: "Cài trình điều khiển chính thức từ hãng GPU rồi quét lại.",
+  CLAIM_UNVERIFIED: "Kiểm tra lại thông số đã nhập hoặc bổ sung dữ liệu phần cứng còn thiếu.",
+  NOT_RUN: "Chạy lại bước kiểm tra tương ứng để có kết quả đầy đủ.",
+  TIMED_OUT: "Thử quét lại; nếu vẫn quá thời gian chờ, kiểm tra thiết bị hoặc trình điều khiển liên quan."
+});
 const maxUrl = 950;
 const maxPrefix = 64;
 const maxJson = 1024 * 1024;
+const THIN_SPACE = "\u2009";
 
 class UnsupportedCompression extends Error {}
 
@@ -209,13 +306,28 @@ async function inflate(bytes) {
 }
 
 function fullReport(value) {
-  requireValid(shape(value, ["v", "cp", "ts", "pf", "vd", "hw", "ent", ...groups, "disc", "tr"]));
+  requireValid(value !== null && typeof value === "object" && !Array.isArray(value));
+  const keys = Object.keys(value);
+  requireValid(requiredReportKeys.every(key => Object.hasOwn(value, key))
+    && keys.every(key => allowedReportKeys.has(key)));
   requireValid(value.v === 1 && (value.cp === 1 || value.cp === 2) && integer(value.ts, 9999999999)
     && (value.pf === "L" || value.pf === "D") && verdicts.includes(value.vd));
   requireValid(shape(value.hw, Object.keys(summaryText)) && Object.values(value.hw).every(item => ascii(item, 20)));
   requireValid(shape(value.ent, ["ep", "loc", "ap"]) && codeIn(endpointText, value.ent.ep)
     && codeIn(localText, value.ent.loc) && value.ent.ap === "UNV");
   requireValid(shape(value.tr, groups) && Object.values(value.tr).every(item => integer(item, 255)));
+  if (Object.hasOwn(value, "g")) {
+    requireValid(fixedArray(value.g, 7) && value.g.every(gate => integer(gate, 5)));
+  }
+  if (Object.hasOwn(value, "k")) {
+    requireValid(value.k !== null && typeof value.k === "object" && !Array.isArray(value.k));
+    const metrics = {};
+    for (const [key, metric] of Object.entries(value.k)) {
+      requireValid(Number.isInteger(metric) && metric >= 0);
+      if (metricKeys.includes(key)) metrics[key] = metric;
+    }
+    value.k = metrics;
+  }
   for (const group of groups) {
     requireValid(Array.isArray(value[group]) && value[group].every(row =>
       (shape(row, ["c"]) || (shape(row, ["c", "m"]) && ascii(row.m, 24)))
@@ -277,10 +389,99 @@ function details(parent, rows) {
     add(row, "dt", label);
     add(row, "dd", text);
   }
+  return list;
 }
 
 function countText(count) {
   return count === 255 ? "255+" : String(count);
+}
+
+function formatInt(n) {
+  return String(Math.trunc(n)).replace(/\B(?=(\d{3})+(?!\d))/g, THIN_SPACE);
+}
+
+function formatDecimalNoTrailingZero(value) {
+  return value.toFixed(1).replace(/\.0$/, "");
+}
+
+function formatRamSummary(ram) {
+  if (!ram) return "";
+  const match = /^(\d+)\s*MiB$/i.exec(ram.trim());
+  if (!match) return ram.trim();
+  const gib = Number(match[1]) / 1024;
+  return (Number.isInteger(gib) ? String(gib) : formatDecimalNoTrailingZero(gib)) + "G";
+}
+
+function formatRamDetail(ram) {
+  if (!ram) return "";
+  const match = /^(\d+)\s*MiB$/i.exec(ram.trim());
+  if (!match) return ram.trim();
+  const mib = Number(match[1]);
+  if (mib % 1024 === 0) return (mib / 1024) + " GiB";
+  return (mib / 1024).toFixed(1) + " GiB (" + formatInt(mib) + " MiB)";
+}
+
+function formatDiskSummary(disk) {
+  if (!disk) return "";
+  const match = /^(\d+)\s*GB$/i.exec(disk.trim());
+  if (!match) return disk.trim();
+  const gb = Number(match[1]);
+  if (gb >= 1000) return formatDecimalNoTrailingZero(gb / 1000) + "TB";
+  return gb + "GB";
+}
+
+function displayClass(dx) {
+  if (dx >= 3800) return "4K";
+  if (dx >= 2800) return "3K";
+  if (dx >= 2500) return "2.5K";
+  if (dx >= 1900) return "FHD";
+  if (dx >= 1360) return "HD+";
+  return "HD";
+}
+
+function formatDisplaySummary(k) {
+  if (!k) return "";
+  const parts = [];
+  if (k.dx > 0) parts.push(displayClass(k.dx));
+  if (k.dh > 0) parts.push(k.dh + "Hz");
+  return parts.join(" ");
+}
+
+function formatAge(days) {
+  if (days >= 365) return "~" + Math.round(days / 365) + " năm";
+  return Math.max(1, Math.round(days / 30)) + " tháng";
+}
+
+function formatWritten(gb) {
+  if (gb >= 1000) return formatDecimalNoTrailingZero(gb / 1000) + " TB";
+  return formatInt(gb) + " GB";
+}
+
+function buildMetricsRows(k) {
+  if (!k) return [];
+  const rows = [];
+  if (Object.hasOwn(k, "bw")) rows.push(["Độ chai pin", k.bw + " %"]);
+  if (Object.hasOwn(k, "bc")) rows.push(["Chu kỳ sạc", formatInt(k.bc)]);
+  if (Object.hasOwn(k, "sh")) rows.push(["SMART còn lại", k.sh + " %"]);
+  if (Object.hasOwn(k, "ph")) rows.push(["Giờ chạy ổ", formatInt(k.ph) + " h"]);
+  if (Object.hasOwn(k, "tw")) rows.push(["Đã ghi", formatWritten(k.tw)]);
+  if (Object.hasOwn(k, "cm")) {
+    if (Object.hasOwn(k, "cb") && k.cb > 0) {
+      const pct = Math.round((k.cm * 100) / k.cb);
+      rows.push(["Xung CPU dưới tải", formatInt(k.cm) + " / " + formatInt(k.cb) + " MHz (" + pct + "%)"]);
+    } else {
+      rows.push(["Xung CPU dưới tải", formatInt(k.cm) + " MHz"]);
+    }
+  } else if (Object.hasOwn(k, "cb") && k.cb > 0) {
+    rows.push(["Xung gốc CPU", formatInt(k.cb) + " MHz"]);
+  }
+  if (Object.hasOwn(k, "gt")) rows.push(["Nhiệt GPU cao nhất", k.gt + " °C"]);
+  if (Object.hasOwn(k, "ru")) rows.push(["RAM khả dụng", (k.ru / 1024).toFixed(1) + " GiB"]);
+  if (Object.hasOwn(k, "wc")) rows.push(["WHEA 30 ngày", formatInt(k.wc)]);
+  if (Object.hasOwn(k, "wf")) rows.push(["WHEA Fatal 90 ngày", formatInt(k.wf)]);
+  if (Object.hasOwn(k, "dh")) rows.push(["Màn hình", formatInt(k.dh) + " Hz"]);
+  if (Object.hasOwn(k, "ag")) rows.push(["Tuổi máy", formatAge(k.ag)]);
+  return rows;
 }
 
 const manualItems = Object.freeze({
@@ -322,62 +523,181 @@ function factoryLookup({ model, sn }) {
   return null;
 }
 
-function render(report) {
-  const view = document.createDocumentFragment();
-  const overview = panel(view, report.cp === 1 ? "Báo cáo sơ bộ" : "Báo cáo hoàn chỉnh");
-  add(overview, "p", verdictText[report.vd], "verdict " + report.vd);
+function renderBanner(view, report) {
+  const head = add(view, "div", undefined, "report-head");
+  add(head, "h2", report.cp === 1 ? "Báo cáo sơ bộ" : "Báo cáo hoàn chỉnh");
   const timestamp = new Date(report.ts * 1000).toISOString().slice(0, 19).replace("T", " ") + " UTC";
-  add(overview, "p", (report.pf === "L" ? "Laptop" : "Máy để bàn") + " · " + timestamp, "detail");
-  if (report.cp === 1) add(overview, "p", "Kết quả sau quét cấu hình và nhật ký. Kiểm tra ngoại vi và tải chưa chạy.");
+  const metaParts = [report.hw.model, report.pf === "L" ? "Laptop" : "Máy để bàn", timestamp].filter(Boolean);
+  add(head, "p", metaParts.join(" · "), "detail");
 
-  const hardware = Object.keys(summaryText).filter(key => report.hw[key]);
-  if (hardware.length) {
-    const section = panel(view, "Cấu hình");
-    details(section, hardware.map(key => [summaryText[key], report.hw[key]]));
-    const lookup = factoryLookup(report.hw);
+  const banner = add(view, "section", undefined, "banner " + report.vd);
+  const top = add(banner, "div", undefined, "banner-top");
+  add(top, "p", verdictText[report.vd], "verdict " + report.vd);
+
+  const counts = report.counts
+    ? report.counts
+    : [report.db.length, report.unv.length, report.wn.length];
+  const [dbN, unvN, wnN] = counts;
+  if (dbN + unvN + wnN > 0) {
+    let badgeText = "";
+    let badgeClass = report.vd;
+    if (dbN === 0 && unvN === 0 && wnN > 0) {
+      badgeText = "Kèm " + wnN + " lưu ý";
+      badgeClass = "WARN";
+    } else if (report.vd === "INC" && wnN > 0 && dbN === 0) {
+      badgeText = "Kèm " + wnN + " lưu ý";
+      badgeClass = "WARN";
+    } else {
+      const parts = [];
+      if (dbN > 0) parts.push(dbN + " loại");
+      if (unvN > 0) parts.push(unvN + " chưa đủ");
+      if (wnN > 0) parts.push(wnN + " lưu ý");
+      badgeText = parts.join(" · ");
+    }
+    add(top, "span", badgeText, "chip " + badgeClass);
+  }
+
+  const sub = report.vd === "INC" && wnN > 0
+    ? "Một số hạng mục chưa đủ dữ liệu; có mục cần lưu ý đàm phán."
+    : verdictSummary[report.vd];
+  add(banner, "p", sub, "banner-sub");
+  if (report.cp === 1) {
+    add(banner, "p", "Kết quả sau quét cấu hình và nhật ký. Kiểm tra ngoại vi và tải chưa chạy.", "banner-note");
+  }
+}
+
+function renderConfigSummary(view, report) {
+  const hw = report.hw;
+  const summaryParts = [
+    hw.cpu,
+    hw.gpu,
+    formatRamSummary(hw.ram),
+    formatDiskSummary(hw.disk),
+    formatDisplaySummary(report.k)
+  ].filter(Boolean);
+
+  const detailRows = [];
+  if (hw.model) detailRows.push([summaryText.model, hw.model]);
+  if (hw.sn) detailRows.push([summaryText.sn, hw.sn]);
+  if (hw.cpu) detailRows.push([summaryText.cpu, hw.cpu]);
+  if (hw.gpu) detailRows.push([summaryText.gpu, hw.gpu]);
+  if (hw.ram) detailRows.push([summaryText.ram, formatRamDetail(hw.ram)]);
+  if (hw.disk) detailRows.push([summaryText.disk, hw.disk]);
+  if (report.k && report.k.dx > 0 && report.k.dy > 0) {
+    detailRows.push(["Độ phân giải", report.k.dx + "×" + report.k.dy]);
+  }
+  const lookup = factoryLookup(hw);
+
+  if (!summaryParts.length && !detailRows.length && !lookup) return;
+
+  const section = add(view, "section", undefined, "config-panel");
+  const line = summaryParts.length ? summaryParts.join(" / ") : "Serial: " + hw.sn;
+  add(section, "p", line, "config-line");
+
+  if (detailRows.length || lookup) {
+    const expander = add(section, "details", undefined, "config-details");
+    add(expander, "summary", "Chi tiết cấu hình");
+    if (detailRows.length) details(expander, detailRows);
     if (lookup) {
-      const link = add(add(section, "p"), "a", "Tra cấu hình xuất xưởng");
+      const link = add(add(expander, "p", undefined, "lookup-row"), "a", "Tra cấu hình xuất xưởng");
       link.href = lookup.url;
       link.target = "_blank";
       link.rel = "noopener noreferrer";
-      if (lookup.hint) add(section, "p", lookup.hint, "detail");
+      if (lookup.hint) add(expander, "p", lookup.hint, "detail");
     }
   }
+}
 
-  details(panel(view, "Quản trị thiết bị"), [
-    ["Máy chủ Microsoft", endpointText[report.ent.ep]],
-    ["Trạng thái cục bộ", localText[report.ent.loc]],
-    ["Autopilot Cloud", "Chưa xác minh"]
-  ]);
+function renderGates(view, gates) {
+  if (!gates) return;
+  const section = panel(view, "Hạng mục kiểm tra");
+  const list = add(section, "dl");
+  gates.forEach((gate, index) => {
+    const row = add(list, "div");
+    add(row, "dt", gateNames[index]);
+    const cell = add(row, "dd");
+    add(cell, "span", gateText[gate], "chip " + gateClasses[gate]);
+  });
+}
 
+function renderFindings(view, report) {
   if (report.gates) {
-    details(panel(view, "Hạng mục kiểm tra"), report.gates.map((gate, index) => [gateNames[index], gateText[gate]]));
-    const summary = panel(view, "Số mục phát hiện");
-    details(summary, groups.map((group, index) => [groupText[group], countText(report.counts[index])]));
-    add(summary, "p", "Xuất file báo cáo từ SystemCheck trên PC để xem chi tiết.");
-    return view;
+    if (report.counts.some(count => count > 0)) {
+      const summary = panel(view, "Số mục phát hiện");
+      details(summary, groups.map((group, index) => [groupText[group], countText(report.counts[index])]));
+      add(summary, "p", "Xuất file báo cáo từ SystemCheck trên PC để xem chi tiết.", "detail omitted-note");
+    }
+    return;
   }
 
-  let omitted = false;
+  const items = [];
   for (const group of groups) {
-    if (!report[group].length && !report.tr[group]) continue;
-    const section = panel(view, groupText[group]);
-    if (report[group].length) {
-      const list = add(section, "ul");
-      for (const row of report[group]) {
-        const item = row.c === "PERIPH_DEFECT" && Object.hasOwn(manualItems, row.m)
-          ? manualItems[row.m] : row.m;
-        add(list, "li", findings[row.c] + (item === undefined ? "" : " (" + item + ")"));
+    for (const row of report[group]) items.push({ group, row });
+  }
+  const omittedGroups = groups.filter(group => report.tr[group] > 0);
+  if (!items.length && !omittedGroups.length) return;
+
+  const section = panel(view, "Cần chú ý");
+  if (items.length) {
+    const list = add(section, "ul", undefined, "findings-list");
+    for (const { group, row } of items) {
+      const li = add(list, "li");
+      add(li, "p", findings[row.c], "finding-desc");
+      const item = row.c === "PERIPH_DEFECT" && Object.hasOwn(manualItems, row.m)
+        ? manualItems[row.m] : row.m;
+      const meta = add(li, "p", undefined, "finding-meta");
+      add(meta, "span", severityChipText[group], "chip chip-sm " + severityChipClass[group]);
+      add(meta, "span", row.c + (item === undefined ? "" : " · " + item), "code-text");
+      const action = (item !== undefined && Object.hasOwn(actions, item) && actions[item])
+        || (Object.hasOwn(actions, row.c) && actions[row.c]);
+      if (action) {
+        const line = add(li, "p", undefined, "finding-action");
+        add(line, "strong", "Việc cần làm: ");
+        add(line, "span", action);
       }
     }
-    if (report.tr[group]) {
-      omitted = true;
-      add(section, "p", "Đã lược " + countText(report.tr[group]) + " mục.", "detail");
-    }
   }
-  if (omitted) add(view, "p", "Xuất file báo cáo từ SystemCheck trên PC để xem chi tiết.", "panel");
-  if (report.disc.length) {
-    const list = add(panel(view, "Phạm vi kiểm tra"), "ul");
+  for (const group of omittedGroups) {
+    add(section, "p", groupText[group] + ": Đã lược " + countText(report.tr[group]) + " mục.", "detail omitted-note");
+  }
+  if (omittedGroups.length) {
+    add(section, "p", "Xuất file báo cáo từ SystemCheck trên PC để xem chi tiết.", "detail omitted-note");
+  }
+}
+
+function renderMetrics(view, k) {
+  const rows = buildMetricsRows(k);
+  if (!rows.length) return;
+  details(panel(view, "Số đo chính"), rows);
+}
+
+function renderManagement(view, ent) {
+  const section = panel(view, "Quản trị thiết bị");
+  const list = add(section, "dl");
+  for (const [label, value] of [
+    ["Máy chủ Microsoft", endpointText[ent.ep]],
+    ["Trạng thái cục bộ", localText[ent.loc]]
+  ]) {
+    const row = add(list, "div");
+    add(row, "dt", label);
+    add(row, "dd", value);
+  }
+  const apRow = add(list, "div");
+  add(apRow, "dt", "Autopilot Cloud");
+  add(add(apRow, "dd"), "span", "Chưa xác minh", "chip INC");
+}
+
+function render(report) {
+  const view = document.createDocumentFragment();
+  // §7.5 order: verdict banner -> one-line config summary -> 7 gates -> merged findings -> metrics -> management -> disclosures.
+  renderBanner(view, report);
+  renderConfigSummary(view, report);
+  renderGates(view, report.gates || report.g);
+  renderFindings(view, report);
+  renderMetrics(view, report.k);
+  renderManagement(view, report.ent);
+  if (report.disc && report.disc.length) {
+    const list = add(panel(view, "Phạm vi kiểm tra"), "ul", undefined, "disc-list");
     for (const code of report.disc) add(list, "li", disclosures[code]);
   }
   return view;
