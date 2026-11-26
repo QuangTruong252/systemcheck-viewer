@@ -1,0 +1,418 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<meta name="color-scheme" content="light">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-Wcg/kKwWcCbIG1/qKhR8BvuY/1ZkNdIGO4tdoevzKsQ='; style-src 'sha256-iZbAVmctFMmbSZ5doox0Gd/xntyv9r0eqh/fiTZtAT8='; base-uri 'none'; form-action 'none'">
+<title>Báo cáo SystemCheck</title>
+<style>
+  :root {
+    font: 100%/1.55 system-ui, sans-serif;
+    color: #172538;
+    background: #f1f5f8;
+  }
+  body { margin: 0; }
+  main { box-sizing: border-box; max-width: 42rem; margin: auto; padding: 1rem; }
+  h1, h2 { margin: 0; line-height: 1.25; }
+  h1 { font-size: clamp(1.45rem, 5vw, 2rem); }
+  h2 { font-size: 1.12rem; }
+  p, dl, ul { margin: .6rem 0 0; }
+  section, .panel {
+    margin: .85rem 0;
+    border: 1px solid #c8d3de;
+    border-radius: .85rem;
+    padding: .85rem 1rem;
+    background: #fff;
+    overflow-wrap: anywhere;
+  }
+  .verdict { font-size: 1.24rem; font-weight: 750; }
+  .PASS { color: #166037; }
+  .WARN { color: #8a3908; }
+  .INC { color: #574172; }
+  .DB { color: #a12636; }
+  .detail { color: #435367; }
+  dl div { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 3fr); gap: .6rem; padding: .3rem 0; }
+  dt { font-weight: 600; }
+  dd { margin: 0; }
+  ul { padding-inline-start: 1.35rem; }
+  li + li { margin-top: .35rem; }
+  @media (max-width: 24rem) {
+    dl div { grid-template-columns: 1fr; gap: 0; }
+  }
+</style>
+</head>
+<body>
+<main>
+  <h1>Báo cáo SystemCheck</h1>
+  <p id="status" role="status" aria-atomic="true">Đang đọc báo cáo…</p>
+  <div id="report"></div>
+  <section aria-labelledby="limits">
+    <h2 id="limits">Giới hạn phát hiện</h2>
+    <p>Phần mềm không thể xác minh các tình trạng sau:</p>
+    <ul>
+      <li>Card đồ họa từng được dùng để đào coin.</li>
+      <li>Mainboard từng được sửa chữa.</li>
+      <li>Máy từng bị vào nước.</li>
+      <li>Bộ đếm SMART hoặc pin từng bị đặt lại ở tầng firmware.</li>
+    </ul>
+  </section>
+  <noscript><p>Bật JavaScript để mở báo cáo trên thiết bị này.</p></noscript>
+</main>
+<script>
+"use strict";
+
+const findings = Object.freeze({
+  "AC_LOST_DURING_LOAD": "Mất nguồn AC trong khi chạy kiểm thử tải.",
+  "BAT_AC_SUPPLEMENTAL_DRAIN": "Pin vẫn xả liên tục khi máy đang cắm sạc và chạy tải.",
+  "BAT_COLLAPSE": "Dung lượng pin sụt nhanh hoặc pin chuyển sang mức nguy cấp trong phiên đo.",
+  "BAT_FULL_ON_OLD_PC": "Pin báo dung lượng sạc đầy bằng hoặc cao hơn dung lượng thiết kế trên máy hơn hai năm tuổi.",
+  "BAT_WEAR": "Dung lượng sạc đầy của pin còn tối đa 75% mức thiết kế.",
+  "CLAIM_MISMATCH": "Thông số đo được khác thông số người bán cam kết.",
+  "CLAIM_UNVERIFIED": "Chưa đủ dữ liệu để đối chiếu thông số người bán cam kết.",
+  "CLOCK_CONFLICT": "Giờ hệ thống mâu thuẫn với các mốc thời gian cục bộ.",
+  "CLOCK_DRIFT": "Giờ hệ thống lệch hơn 24 giờ so với nguồn giờ trực tuyến.",
+  "CPU_BRAND_ABNORMAL": "Chuỗi định danh CPU có giá trị bất thường.",
+  "CPU_ES_DETECTED": "Chuỗi định danh CPU có nhãn mẫu thử nghiệm.",
+  "CPU_OVERTEMP": "Cảm biến CPU ghi nhận nhiệt độ từ 97 °C kéo dài khi chạy tải.",
+  "CPU_THROTTLE": "Xung CPU trung bình dưới 85% xung cơ sở khi chạy tải.",
+  "CPU_TOPOLOGY_MISMATCH": "Số lõi, số luồng hoặc tổng bộ nhớ đệm L3 đo được không khớp với mẫu CPU được nhận diện.",
+  "CPU_TOPOLOGY_REDUCED": "Số lõi hoặc luồng đang hoạt động thấp hơn thông số của mẫu CPU được nhận diện.",
+  "DATA_UNAVAILABLE": "Thiếu dữ liệu cần thiết để đánh giá mục này.",
+  "DISK_HIGH_WEAR": "Ổ NVMe báo mức hao mòn từ 80%.",
+  "DISK_IO_SKIPPED_SPACE": "Phân vùng thiếu dung lượng trống để thử ghi an toàn.",
+  "DISK_LOW_POH_VS_AGE": "Số giờ hoạt động ổ đĩa báo cáo thấp so với tuổi máy.",
+  "DISK_READBACK_MISMATCH": "Đọc kiểm chứng gặp lỗi CRC hoặc mã băm không khớp.",
+  "DISK_SLOW_P99": "Độ trễ đọc p99 của SSD vượt 250 ms.",
+  "DISK_SMART_CRITICAL": "SMART ghi nhận lỗi vùng nhớ hoặc mức dự phòng dưới ngưỡng.",
+  "DISK_SMART_UNREADABLE": "Chưa đọc đủ thuộc tính SMART cốt lõi của ổ hệ thống.",
+  "DISK_COUNTER_INCONSISTENT": "Các bộ đếm SMART của ổ hệ thống không nhất quán với nhau.",
+  "DISK_UDMA_CRC": "Ổ hệ thống ghi nhận ít nhất 10 lỗi CRC trên đường truyền SATA.",
+  "DISP_REPLACED_OR_LOW_GAMUT": "Màn hình có năm sản xuất khác hoặc dải màu đo được thấp.",
+  "DISP_SEVERE_DEFECT": "Người kiểm tra đánh dấu màn hình có lỗi nặng.",
+  "ENT_AUTOPILOT_CACHE": "Có dữ liệu Autopilot lưu đệm từ trước.",
+  "ENT_LOCAL_ACTIVE": "Quan sát thấy trạng thái quản trị doanh nghiệp đang hoạt động.",
+  "ENT_LOCAL_TAMPER": "Cấu hình hosts hoặc tường lửa chặn máy chủ quản trị Microsoft.",
+  "FW_WPBT_PRESENT": "Bảng ACPI WPBT chứa chương trình có khả năng tự khôi phục qua firmware.",
+  "GPU_CODE43": "Windows báo Code 43 trên một bộ xử lý đồ họa.",
+  "GPU_DRIVER_MISSING": "Chưa xác minh được GPU chạy với trình điều khiển của hãng.",
+  "GPU_HIST_TDR": "Nhật ký ghi nhận nhiều lần đặt lại trình điều khiển đồ họa gần đây.",
+  "GPU_HOTSPOT_DELTA": "Nhiệt độ HotSpot và nhân GPU chênh nhau ít nhất 20 °C.",
+  "GPU_ID_FEATURE_CONFLICT": "Mã thiết bị GPU và mức tính năng Direct3D không khớp.",
+  "GPU_LOAD_TDR": "Quan sát thấy lỗi thiết bị hoặc đặt lại trình điều khiển trên GPU đang chạy tải.",
+  "GPU_TDR_UNATTRIBUTED": "Có sự kiện đặt lại trình điều khiển khi thử tải, chưa quy được cho GPU đang thử.",
+  "HISTORY_AGE_UNKNOWN": "Đã ghi nhận sự kiện, chưa xác định được tuổi do xung đột đồng hồ.",
+  "KEY_CHATTER": "Kiểm tra bàn phím ghi nhận ít nhất ba lần lặp phím dưới 35 ms.",
+  "NOT_RUN": "Hạng mục này chưa chạy.",
+  "OS_FRESH_INSTALL": "Windows mới cài dưới 72 giờ, chưa thấy dấu vết nâng cấp.",
+  "OS_LOG_CLEARED": "Nhật ký ghi nhận sự kiện xóa log Windows (Event 104).",
+  "OS_OOBE_BYPASS": "Quan sát thấy cấu hình BypassNRO trên bản Windows OEM thương mại.",
+  "PERIPH_DEFECT": "Người kiểm tra ghi nhận lỗi ngoại vi.",
+  "PERIPH_NOT_RUN": "Kiểm tra ngoại vi chưa hoàn tất hoặc đã được bỏ qua.",
+  "RAM_RESERVED_HIGH": "Lượng RAM dành riêng ngoài phần cấp cho đồ họa tích hợp ở mức cao.",
+  "RAM_UNUSABLE": "Một phần đáng kể RAM đã lắp không khả dụng cho Windows.",
+  "SKIPPED_NO_ADMIN": "Hạng mục được bỏ qua vì cần quyền quản trị.",
+  "TIMED_OUT": "Hạng mục chưa trả kết quả trong thời gian chờ.",
+  "WHEA_CORR_REPEAT": "Nhật ký có ít nhất năm lỗi WHEA đã sửa trong 30 ngày.",
+  "WHEA_FATAL": "Nhật ký có lỗi WHEA nghiêm trọng hoặc chưa sửa trong 90 ngày.",
+  "ID_DISPLAY_MISMATCH": "Tên phần cứng hiển thị trong Windows khác định danh từ CPUID hoặc PCI.",
+  "BOARD_VENDOR_MISMATCH": "Hãng bo mạch chủ khác hãng máy trong dữ liệu SMBIOS.",
+  "CPU_COMPUTE_ERROR": "Kết quả tính toán CPU dưới tải khác kết quả kiểm chứng.",
+  "RAM_PATTERN_ERROR": "Dữ liệu đọc lại từ RAM dưới tải khác mẫu đã ghi.",
+  "RAM_WMD_ERRORS": "Nhật ký ghi nhận Windows Memory Diagnostic đã phát hiện lỗi RAM.",
+  "CPU_POWER_CAPPED": "Cấu hình nguồn giới hạn mức hiệu năng tối đa của CPU dưới 100% khi bắt đầu tải.",
+  "LOAD_TUNING_TOOL_ACTIVE": "Có tiến trình tinh chỉnh xung nhịp hoặc điện áp khi bắt đầu tải. Kết quả có thể khác khi dùng cấu hình mặc định.",
+  "BAT_LOW_CYCLES_VS_AGE": "Pin báo số chu kỳ sạc thấp so với tuổi máy.",
+});
+const disclosures = Object.freeze({
+  CLOCK_UNVERIFIED: "Giờ cục bộ chưa được đối chiếu với nguồn giờ trực tuyến.",
+  CPU_TEMP_UNSUPPORTED: "Chưa có số đo nhiệt độ CPU được hỗ trợ.",
+  NET_MS_UNREACHABLE: "Mạng hiện tại chưa kết nối được với máy chủ quản trị Microsoft.",
+  SKIP_4B: "Đã bỏ qua bài thử xả pin riêng.",
+  NO_CLAIM: "Chưa nhập thông số người bán cam kết.",
+  RAM_TEST_SKIPPED: "Đã bỏ qua bài quét RAM vì không chuẩn bị được bộ nhớ kiểm thử."
+});
+
+const verdicts = ["PASS", "WARN", "INC", "DB"];
+const verdictText = { PASS: "ĐẠT", WARN: "ĐÀM PHÁN GIÁ / LƯU Ý", INC: "CHƯA ĐỦ KẾT LUẬN", DB: "LOẠI NGAY" };
+const gateText = ["Đạt", "Lưu ý", "Chưa đủ kết luận", "Loại ngay", "Chưa chạy", "Không áp dụng"];
+const gateNames = ["Tải CPU", "RAM khả dụng", "Đồ họa", "Lưu trữ", "Quản trị và WHEA", "Ngoại vi", "Pin"];
+const endpointText = { OK: "Kết nối được", INC: "Chưa xác minh kết nối", SKIP_OFFLINE: "Bỏ qua khi ngoại tuyến" };
+const localText = { OK: "Chưa ghi nhận dấu hiệu cục bộ", WARN: "Có mục cần lưu ý hoặc chưa xác minh", DB: "Có phát hiện nghiêm trọng" };
+const summaryText = { model: "Dòng máy", sn: "Serial", cpu: "CPU", gpu: "GPU", ram: "RAM đã lắp", disk: "Ổ hệ thống" };
+const groupText = { db: "Phát hiện nghiêm trọng", unv: "Chưa xác minh", wn: "Lưu ý" };
+const groups = ["db", "unv", "wn"];
+const maxUrl = 950;
+const maxPrefix = 64;
+const maxJson = 1024 * 1024;
+
+class UnsupportedCompression extends Error {}
+
+function requireValid(condition) {
+  if (!condition) throw new Error("Invalid report");
+}
+
+function shape(value, keys) {
+  return value !== null && typeof value === "object" && !Array.isArray(value)
+    && Object.keys(value).length === keys.length && keys.every(key => Object.hasOwn(value, key));
+}
+
+function integer(value, max) {
+  return Number.isInteger(value) && value >= 0 && value <= max;
+}
+
+function ascii(value, max) {
+  return typeof value === "string" && value.length <= max && !/[^ -~]/.test(value);
+}
+
+function fixedArray(value, length) {
+  return Array.isArray(value) && value.length === length;
+}
+
+function codeIn(map, value) {
+  return typeof value === "string" && Object.hasOwn(map, value);
+}
+
+function base64Bytes(encoded) {
+  requireValid(encoded.length > 0 && !/[^A-Za-z0-9_-]/.test(encoded));
+  const standard = encoded.replace(/-/g, "+").replace(/_/g, "/");
+  const binary = atob(standard);
+  requireValid(btoa(binary).replace(/=+$/, "") === standard);
+  return Uint8Array.from(binary, char => char.charCodeAt(0));
+}
+
+async function inflate(bytes) {
+  // One MiB exceeds the RFC 1951 expansion possible within this QR budget.
+  let stream;
+  try { stream = new DecompressionStream("deflate-raw"); }
+  catch { throw new UnsupportedCompression(); }
+  const reader = new Blob([bytes]).stream().pipeThrough(stream).getReader();
+  const decoder = new TextDecoder("utf-8", { fatal: true, ignoreBOM: true });
+  let json = "";
+  let length = 0;
+  try {
+    for (;;) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      length += value.length;
+      requireValid(length <= maxJson);
+      json += decoder.decode(value, { stream: true });
+    }
+    return json + decoder.decode();
+  } catch (error) {
+    await reader.cancel().catch(() => {});
+    throw error;
+  } finally {
+    reader.releaseLock();
+  }
+}
+
+function fullReport(value) {
+  requireValid(shape(value, ["v", "cp", "ts", "pf", "vd", "hw", "ent", ...groups, "disc", "tr"]));
+  requireValid(value.v === 1 && (value.cp === 1 || value.cp === 2) && integer(value.ts, 9999999999)
+    && (value.pf === "L" || value.pf === "D") && verdicts.includes(value.vd));
+  requireValid(shape(value.hw, Object.keys(summaryText)) && Object.values(value.hw).every(item => ascii(item, 20)));
+  requireValid(shape(value.ent, ["ep", "loc", "ap"]) && codeIn(endpointText, value.ent.ep)
+    && codeIn(localText, value.ent.loc) && value.ent.ap === "UNV");
+  requireValid(shape(value.tr, groups) && Object.values(value.tr).every(item => integer(item, 255)));
+  for (const group of groups) {
+    requireValid(Array.isArray(value[group]) && value[group].every(row =>
+      (shape(row, ["c"]) || (shape(row, ["c", "m"]) && ascii(row.m, 24)))
+      && codeIn(findings, row.c)));
+  }
+  requireValid(Array.isArray(value.disc) && value.disc.every(code => codeIn(disclosures, code)));
+  return value;
+}
+
+function minimalReport(tuple) {
+  requireValid(fixedArray(tuple, 10));
+  const [v, cp, pf, vd, ts, ent, gates, counts, serial, exportFlag] = tuple;
+  requireValid(v === 1 && (cp === 1 || cp === 2) && integer(pf, 1)
+    && integer(vd, 3) && integer(ts, 9999999999) && exportFlag === 1);
+  requireValid(fixedArray(ent, 3) && integer(ent[0], 2) && integer(ent[1], 2) && ent[2] === 2);
+  requireValid(fixedArray(gates, 7) && gates.every(gate => integer(gate, 5)));
+  requireValid(fixedArray(counts, 3) && counts.every(count => integer(count, 255)));
+  requireValid(typeof serial === "string" && serial.length <= 8 && !/[^A-Za-z0-9-]/.test(serial));
+  return {
+    cp, pf: pf === 0 ? "L" : "D", vd: verdicts[vd], ts,
+    hw: { sn: serial },
+    ent: { ep: ["OK", "INC", "SKIP_OFFLINE"][ent[0]], loc: ["OK", "WARN", "DB"][ent[1]], ap: "UNV" },
+    gates, counts
+  };
+}
+
+async function decodeReport(hash) {
+  requireValid(hash.length <= maxUrl);
+  if (hash.startsWith("#v1m.")) {
+    const bytes = base64Bytes(hash.slice(5));
+    requireValid(bytes.length <= 71 && bytes.every(byte => byte < 128));
+    const json = new TextDecoder().decode(bytes);
+    const tuple = JSON.parse(json);
+    requireValid(JSON.stringify(tuple) === json);
+    return minimalReport(tuple);
+  }
+  requireValid(hash.startsWith("#v1."));
+  return fullReport(JSON.parse(await inflate(base64Bytes(hash.slice(4)))));
+}
+
+function add(parent, tag, label, className) {
+  const element = document.createElement(tag);
+  if (label !== undefined) element.textContent = label;
+  if (className) element.className = className;
+  parent.append(element);
+  return element;
+}
+
+function panel(parent, title) {
+  const section = add(parent, "section");
+  add(section, "h2", title);
+  return section;
+}
+
+function details(parent, rows) {
+  const list = add(parent, "dl");
+  for (const [label, text] of rows) {
+    const row = add(list, "div");
+    add(row, "dt", label);
+    add(row, "dd", text);
+  }
+}
+
+function countText(count) {
+  return count === 255 ? "255+" : String(count);
+}
+
+const manualItems = Object.freeze({
+  BATTERY_CASE: "Pin phồng / vỏ cong",
+  SCREWS_SEALS: "Ốc / tem",
+  PORTS: "Cổng kết nối",
+  WEBCAM: "Webcam",
+  WI_FI: "Wi-Fi"
+});
+
+function factoryLookup({ model, sn }) {
+  // 2026-11-26: #v1m has sn8 but no vendor. Use only the full #v1 hardware summary.
+  if (!model || !sn) return null;
+  const serial = sn.trim().toUpperCase();
+  const name = model.trim();
+  // 2026-11-26: Lenovo PC Support redirected /products/{serial}/parts/display/as-built
+  // to the canonical product's As-Built page on https://pcsupport.lenovo.com/ (HTTP 200).
+  if (/^lenovo(?:\s|$)/i.test(name) && /^[A-Z0-9]{7,8}$/.test(serial)) {
+    return {
+      url: "https://pcsupport.lenovo.com/us/en/products/" + serial + "/parts/display/as-built"
+    };
+  }
+  // 2026-11-26: Dell KB 000125283 documents Product Specifications > Original Configuration.
+  // https://www.dell.com/support/kbdoc/en-us/000125283 (direct tag GET returned HTTP 403 here).
+  if (/^dell(?:\s|$)/i.test(name) && /^[A-Z0-9]{7}$/.test(serial)) {
+    return {
+      url: "https://www.dell.com/support/product-details/en-us/servicetag/" + serial + "/overview",
+      hint: "Chọn Product Specifications, rồi chọn Original Configuration."
+    };
+  }
+  // HP PartSurfer reads searchtext from the URL and accepts a full 10-character serial.
+  // https://partsurfer.hpcloud.hp.com/PartSurfer/UserGuide (2026-11-26)
+  if (/^(?:hp|hewlett[- ]packard)(?:\s|$)/i.test(name) && /^[A-Z0-9]{10}$/.test(serial)) {
+    return {
+      url: "https://partsurfer.hpcloud.hp.com/?searchtext=" + serial,
+      hint: "Mở thẻ Advanced để xem danh sách linh kiện nếu có."
+    };
+  }
+  return null;
+}
+
+function render(report) {
+  const view = document.createDocumentFragment();
+  const overview = panel(view, report.cp === 1 ? "Báo cáo sơ bộ" : "Báo cáo hoàn chỉnh");
+  add(overview, "p", verdictText[report.vd], "verdict " + report.vd);
+  const timestamp = new Date(report.ts * 1000).toISOString().slice(0, 19).replace("T", " ") + " UTC";
+  add(overview, "p", (report.pf === "L" ? "Laptop" : "Máy để bàn") + " · " + timestamp, "detail");
+  if (report.cp === 1) add(overview, "p", "Kết quả sau quét cấu hình và nhật ký. Kiểm tra ngoại vi và tải chưa chạy.");
+
+  const hardware = Object.keys(summaryText).filter(key => report.hw[key]);
+  if (hardware.length) {
+    const section = panel(view, "Cấu hình");
+    details(section, hardware.map(key => [summaryText[key], report.hw[key]]));
+    const lookup = factoryLookup(report.hw);
+    if (lookup) {
+      const link = add(add(section, "p"), "a", "Tra cấu hình xuất xưởng");
+      link.href = lookup.url;
+      link.target = "_blank";
+      link.rel = "noopener noreferrer";
+      if (lookup.hint) add(section, "p", lookup.hint, "detail");
+    }
+  }
+
+  details(panel(view, "Quản trị thiết bị"), [
+    ["Máy chủ Microsoft", endpointText[report.ent.ep]],
+    ["Trạng thái cục bộ", localText[report.ent.loc]],
+    ["Autopilot Cloud", "Chưa xác minh"]
+  ]);
+
+  if (report.gates) {
+    details(panel(view, "Hạng mục kiểm tra"), report.gates.map((gate, index) => [gateNames[index], gateText[gate]]));
+    const summary = panel(view, "Số mục phát hiện");
+    details(summary, groups.map((group, index) => [groupText[group], countText(report.counts[index])]));
+    add(summary, "p", "Xuất file báo cáo từ SystemCheck trên PC để xem chi tiết.");
+    return view;
+  }
+
+  let omitted = false;
+  for (const group of groups) {
+    if (!report[group].length && !report.tr[group]) continue;
+    const section = panel(view, groupText[group]);
+    if (report[group].length) {
+      const list = add(section, "ul");
+      for (const row of report[group]) {
+        const item = row.c === "PERIPH_DEFECT" && Object.hasOwn(manualItems, row.m)
+          ? manualItems[row.m] : row.m;
+        add(list, "li", findings[row.c] + (item === undefined ? "" : " (" + item + ")"));
+      }
+    }
+    if (report.tr[group]) {
+      omitted = true;
+      add(section, "p", "Đã lược " + countText(report.tr[group]) + " mục.", "detail");
+    }
+  }
+  if (omitted) add(view, "p", "Xuất file báo cáo từ SystemCheck trên PC để xem chi tiết.", "panel");
+  if (report.disc.length) {
+    const list = add(panel(view, "Phạm vi kiểm tra"), "ul");
+    for (const code of report.disc) add(list, "li", disclosures[code]);
+  }
+  return view;
+}
+
+const status = document.getElementById("status");
+const output = document.getElementById("report");
+let revision = 0;
+
+async function showReport() {
+  const current = ++revision;
+  const hash = location.hash;
+  output.replaceChildren();
+  if (!hash) {
+    status.textContent = "Quét mã QR trong SystemCheck để mở báo cáo.";
+    return;
+  }
+  status.textContent = "Đang đọc báo cáo…";
+  try {
+    if (location.protocol === "https:") {
+      requireValid(location.href.length <= maxUrl && location.href.length - hash.length + 1 <= maxPrefix);
+    }
+    const report = await decodeReport(hash);
+    if (current !== revision) return;
+    output.replaceChildren(render(report));
+    status.textContent = "Đã đọc báo cáo trên thiết bị này.";
+  } catch (error) {
+    if (current !== revision) return;
+    status.textContent = error instanceof UnsupportedCompression
+      ? "Trình duyệt này chưa hỗ trợ giải nén báo cáo. Hãy mở mã QR bằng trình duyệt mới hơn hoặc xuất file từ PC."
+      : "Mã QR không hợp lệ hoặc chưa được hỗ trợ.";
+  }
+}
+window.addEventListener("hashchange", showReport);
+showReport();
+</script>
+</body>
+</html>
