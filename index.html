@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="referrer" content="no-referrer">
 <meta name="color-scheme" content="light">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-X+i0aVh2umOSNMNcDM2Nwt98zvNj34cXGnCymcaFv+8='; style-src 'sha256-bIC1cvxH393csOSw86MdPqafcFllIrVM31HV5y5+NOk='; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-XCTOTMbX2yjE7wr9pQVq271WozcxDdre0p10/hLPfCg='; style-src 'sha256-bIC1cvxH393csOSw86MdPqafcFllIrVM31HV5y5+NOk='; base-uri 'none'; form-action 'none'">
 <title>Báo cáo SystemCheck</title>
 <style>
   :root {
@@ -158,6 +158,7 @@ const findings = Object.freeze({
   "DISK_SLOW_P99": "Độ trễ đọc p99 của SSD vượt 250 ms.",
   "DISK_SMART_CRITICAL": "SMART ghi nhận lỗi vùng nhớ hoặc mức dự phòng dưới ngưỡng.",
   "DISK_SMART_UNREADABLE": "Chưa đọc đủ thuộc tính SMART cốt lõi của ổ hệ thống.",
+  "DISK_RAID_DEGRADED": "Mảng RAID chứa ổ hệ thống đang ở trạng thái suy giảm hoặc thiếu ổ thành viên.",
   "DISK_COUNTER_INCONSISTENT": "Các bộ đếm SMART của ổ hệ thống không nhất quán với nhau.",
   "DISK_UDMA_CRC": "Ổ hệ thống ghi nhận ít nhất 10 lỗi CRC trên đường truyền SATA.",
   "DISP_REPLACED_OR_LOW_GAMUT": "Màn hình có năm sản xuất khác hoặc dải màu đo được thấp.",
@@ -173,6 +174,8 @@ const findings = Object.freeze({
   "GPU_ID_FEATURE_CONFLICT": "Mã thiết bị GPU và mức tính năng Direct3D không khớp.",
   "GPU_LOAD_TDR": "Quan sát thấy lỗi thiết bị hoặc đặt lại trình điều khiển trên GPU đang chạy tải.",
   "GPU_TDR_UNATTRIBUTED": "Có sự kiện đặt lại trình điều khiển khi thử tải, chưa quy được cho GPU đang thử.",
+  "GPU_VRAM_ALIASING": "Dung lượng VRAM thực nhỏ hơn dung lượng khai báo (phát hiện trùng lặp địa chỉ bộ nhớ đồ họa).",
+  "GPU_VRAM_PATTERN_ERROR": "Dữ liệu đọc lại từ VRAM dưới tải khác mẫu đã ghi.",
   "HISTORY_AGE_UNKNOWN": "Đã ghi nhận sự kiện, chưa xác định được tuổi do xung đột đồng hồ.",
   "KEY_CHATTER": "Kiểm tra bàn phím ghi nhận ít nhất ba lần lặp phím dưới 35 ms.",
   "NOT_RUN": "Hạng mục này chưa chạy.",
@@ -203,7 +206,16 @@ const disclosures = Object.freeze({
   SKIP_4B: "Đã bỏ qua bài thử xả pin riêng.",
   NO_CLAIM: "Chưa nhập thông số người bán cam kết.",
   RAM_TEST_SKIPPED: "Đã bỏ qua bài quét RAM vì không chuẩn bị được bộ nhớ kiểm thử.",
-  MIC_LOOPBACK_OK: "Micro mặc định thu được tín hiệu thử 1000 Hz từ loa."
+  MIC_LOOPBACK_OK: "Micro mặc định thu được tín hiệu thử 1000 Hz từ loa.",
+  VRAM_TEST_SKIPPED: "Đã bỏ qua bài kiểm tra VRAM vì GPU mục tiêu không phải GPU rời đủ điều kiện hoặc không cấp phát được bộ nhớ kiểm thử.",
+  VRAM_TEST_PARTIAL: "Bài kiểm tra VRAM chỉ phủ dưới 75% dung lượng VRAM khai báo.",
+  WEBCAM_FRAMES_OK: "Camera ghi nhận được khung hình không đen từ thiết bị quay video.",
+  MIC_LEVEL_OK: "Micro mặc định thu được mức âm đạt từ -30 dBFS trở lên.",
+  SMART_VIA_CSMI: "Đã đọc dữ liệu SMART qua giao diện CSMI của bộ điều khiển RAID/RST.",
+  SMART_VIA_RST_NVME: "Đã đọc dữ liệu SMART NVMe qua trình điều khiển Intel RST.",
+  WINPE_OFFLINE: "Đang chạy từ môi trường WinPE; trạng thái hệ điều hành và nhật ký được đọc ở chế độ chỉ đọc từ ổ Windows ngoại tuyến.",
+  WINPE_NO_VENDOR_DRIVER: "Môi trường WinPE không có trình điều khiển đồ họa của hãng nên chưa kiểm chứng được GPU với driver gốc.",
+  X64_ON_ARM64: "Bản x64 đang chạy giả lập trên máy ARM64 nên bỏ qua đánh giá ngưỡng xung CPU dưới tải (CPU_THROTTLE)."
 });
 
 const verdicts = ["PASS", "WARN", "INC", "DB"];
@@ -490,6 +502,7 @@ const manualItems = Object.freeze({
   SCREWS_SEALS: "Ốc / tem",
   PORTS: "Cổng kết nối",
   WEBCAM: "Webcam",
+  MIC: "Mic",
   WI_FI: "Wi-Fi"
 });
 
